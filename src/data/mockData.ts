@@ -18,6 +18,24 @@ export const mockUser: User = {
   creditCode: '91110108MA001ABCDE',
   realNameVerified: true,
   enterpriseVerified: true,
+  enterpriseMaterials: [
+    {
+      id: 'em_001',
+      name: '营业执照.pdf',
+      url: '/mock/business-license.pdf',
+      uploadedAt: '2024-01-10T00:00:00Z',
+      status: 'verified',
+      size: 2560000,
+    },
+    {
+      id: 'em_002',
+      name: '法人授权书.pdf',
+      url: '/mock/authorization.pdf',
+      uploadedAt: '2024-01-12T00:00:00Z',
+      status: 'verified',
+      size: 1200000,
+    },
+  ],
 };
 
 export const mockAircraft: Aircraft[] = [
@@ -452,6 +470,7 @@ export const statusLabels: Record<string, string> = {
   draft: '草稿',
   submitted: '已提交',
   reviewing: '审核中',
+  changing: '变更中',
   correction: '待补正',
   approved: '已通过',
   rejected: '已驳回',
@@ -462,6 +481,7 @@ export const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',
   submitted: 'bg-blue-100 text-blue-600',
   reviewing: 'bg-yellow-100 text-yellow-600',
+  changing: 'bg-purple-100 text-purple-600',
   correction: 'bg-orange-100 text-orange-600',
   approved: 'bg-green-100 text-green-600',
   rejected: 'bg-red-100 text-red-600',

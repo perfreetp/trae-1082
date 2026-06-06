@@ -15,6 +15,7 @@ import {
   Save,
   Send,
   ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { formatFileSize } from '@/utils';
@@ -173,6 +174,16 @@ export default function Materials() {
     updateDeclaration(currentDeclaration.id, { status: 'draft' });
     alert('草稿已保存！');
     navigate('/review');
+  };
+
+  const handleSaveAndNext = () => {
+    if (!currentDeclaration) {
+      alert('请先创建飞行计划');
+      return;
+    }
+    updateDeclaration(currentDeclaration.id, { status: currentDeclaration.status === 'draft' ? 'draft' : currentDeclaration.status });
+    alert('材料已保存！');
+    navigate(`/review?id=${currentDeclaration.id}`);
   };
 
   const handleSubmit = () => {
@@ -504,6 +515,18 @@ export default function Materials() {
             >
               <Send className="w-4 h-4" />
               提交申报
+            </button>
+            <button
+              onClick={handleSaveAndNext}
+              disabled={!currentDeclaration}
+              className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                !currentDeclaration
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-green-500 text-white hover:bg-green-600'
+              }`}
+            >
+              <ArrowRight className="w-4 h-4" />
+              保存并下一步
             </button>
             <button
               onClick={handleSaveDraft}

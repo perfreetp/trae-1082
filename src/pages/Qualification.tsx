@@ -22,7 +22,7 @@ import { maskIdCard, maskPhone, formatDate } from '@/utils';
 type TabType = 'personal' | 'enterprise' | 'aircraft';
 
 export default function Qualification() {
-  const { user, aircraft, updateUser, addAircraft, removeAircraft, updateAircraft } = useAppStore();
+  const { user, aircraft, updateUser, addAircraft, removeAircraft, unbindAircraft, addEnterpriseMaterial, removeEnterpriseMaterial } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [idCardFront, setIdCardFront] = useState<string | null>(user.idCardFront || null);
   const [idCardBack, setIdCardBack] = useState<string | null>(user.idCardBack || null);
@@ -105,8 +105,34 @@ export default function Qualification() {
     }
   };
 
-  const handleUploadEnterpriseMaterial = (materialName: string) => {
-    alert(`${materialName} 上传成功（演示环境）`);
+  const handleUploadEnterpriseMaterial = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
+    input.onchange = (e: any) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        addEnterpriseMaterial({
+          name: file.name,
+          url: `/uploads/${file.name}`,
+          size: file.size,
+        });
+        alert(`${file.name} 上传成功`);
+      }
+    };
+    input.click();
+  };
+
+  const handleRemoveEnterpriseMaterial = (materialId: string) => {
+    if (confirm('确定要删除该材料吗？')) {
+      removeEnterpriseMaterial(materialId);
+    }
+  };
+
+  const handleUnbindAircraft = (id: string) => {
+    if (confirm('确定要解绑该飞行器吗？解绑后该飞行器将无法在新申报中被选中，但记录会保留。')) {
+      unbindAircraft(id);
+    }
   };
 
   return (
@@ -314,33 +340,41 @@ export default function Qualification() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">企业资质文件</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-blue-500" />
-                      <div>
-                        <p className="font-medium text-gray-800">营业执照.pdf</p>
-                        <p className="text-xs text-gray-500">2.5 MB · 已上传</p>
+                  {user.enterpriseMaterials?.map((mat) => (
+                    <div key={mat.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-blue-500" />
+                        <div>
+                          <p className="font-medium text-gray-800">{mat.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {mat.size ? `${(mat.size / 1024 / 1024).toFixed(1)} MB · ` : ''}
+                            上传时间：{formatDate(mat.uploadedAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {mat.status === 'verified' && (
+                          <CheckCircle className="w-5 h-5 text-green-500" title="已审核" />
+                        )}
+                        {mat.status === 'uploaded' && (
+                          <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-600 rounded">审核中</span>
+                        )}
+                        {mat.status === 'rejected' && (
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">已驳回</span>
+                        )}
+                        <button
+                          onClick={() => handleRemoveEnterpriseMaterial(mat.id)}
+                          className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+                          title="删除"
+                        >
+                          <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-blue-500" />
-                      <div>
-                        <p className="font-medium text-gray-800">法人授权书.pdf</p>
-                        <p className="text-xs text-gray-500">1.2 MB · 已上传</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    </div>
-                  </div>
+                  ))}
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
                     <button
-                      onClick={() => handleUploadEnterpriseMaterial('补充资质材料')}
+                      onClick={handleUploadEnterpriseMaterial}
                       className="w-full flex items-center justify-center gap-2 text-gray-500 hover:text-blue-600 transition-colors"
                     >
                       <Upload className="w-5 h-5" />
@@ -478,6 +512,24 @@ export default function Qualification() {
                       >
                         查看详情
                       </button>
+                      {ac.status === 'bound' && (
+                        <button
+                          onClick={() => handleUnbindAircraft(ac.id)}
+                          className="text-sm text-orange-600 hover:text-orange-700 p-2"
+                          title="解绑飞行器"
+                        >
+                          解绑
+                        </button>
+                      )}
+                      {ac.status === 'unbound' && (
+                        <button
+                          onClick={() => alert('重新绑定功能（演示环境）')}
+                          className="text-sm text-green-600 hover:text-green-700 p-2"
+                          title="重新绑定"
+                        >
+                          绑定
+                        </button>
+                      )}
                       <button
                         onClick={() => handleRemoveAircraft(ac.id)}
                         className="text-sm text-red-600 hover:text-red-700 p-2"

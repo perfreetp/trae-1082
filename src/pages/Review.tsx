@@ -43,7 +43,11 @@ export default function Review() {
     resubmitAfterCorrection,
     downloadLicence,
     getMissingRequiredMaterials,
+    isBlacklisted,
+    getBlacklistRecord,
   } = useAppStore();
+  const blacklisted = isBlacklisted();
+  const blacklistRecord = getBlacklistRecord();
 
   const [selectedId, setSelectedId] = useState<string | null>(
     searchParams.get('id') || declarations[0]?.id || null
@@ -164,14 +168,31 @@ export default function Review() {
             <option value="all">全部状态</option>
             <option value="draft">草稿</option>
             <option value="reviewing">审核中</option>
+            <option value="changing">变更中</option>
             <option value="correction">待补正</option>
             <option value="approved">已通过</option>
             <option value="rejected">已驳回</option>
             <option value="revoked">已撤销</option>
           </select>
           <button
-            onClick={() => navigate('/flight-plan')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            onClick={() => {
+              if (blacklisted) {
+                alert(
+                  `您已被列入黑名单（原因：${blacklistRecord?.reason || '未知'}），` +
+                    `处罚期至 ${blacklistRecord ? formatDate(blacklistRecord.expiryDate) : '未知'}，` +
+                    `无法进行新的申报。如有异议，请联系监管部门申诉。`
+                );
+                return;
+              }
+              setCurrentDeclaration(null);
+              navigate('/flight-plan');
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              blacklisted
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+            disabled={blacklisted}
           >
             <Edit3 className="w-4 h-4" />
             新建申报
@@ -308,8 +329,33 @@ export default function Review() {
                         </button>
                       </div>
                     )}
+                    {selectedDeclaration.status === 'changing' && (
+                      <span className="text-sm text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg">
+                        变更处理中，请等待审核结果
+                      </span>
+                    )}
                   </div>
                 </div>
+
+                {selectedDeclaration.status === 'changing' && selectedDeclaration.changeReason && (
+                  <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <RefreshCw className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-purple-800">变更申请信息</h4>
+                        <p className="text-sm text-purple-600 mt-1">
+                          <span className="text-purple-500">变更原因：</span>
+                          {selectedDeclaration.changeReason}
+                        </p>
+                        {selectedDeclaration.changeRequestedAt && (
+                          <p className="text-xs text-purple-500 mt-1">
+                            申请时间：{formatDateTime(selectedDeclaration.changeRequestedAt)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 bg-gray-50 rounded-lg">

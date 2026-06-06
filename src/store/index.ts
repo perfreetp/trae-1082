@@ -11,6 +11,7 @@ import type {
   DeclarationStatus,
   LicenceData,
   FlightPlan,
+  EnterpriseMaterial,
 } from '@/types';
 import {
   mockUser,
@@ -63,7 +64,11 @@ interface AppState {
   addAircraft: (aircraft: Omit<Aircraft, 'id' | 'userId' | 'boundAt'>) => void;
   updateAircraft: (id: string, updates: Partial<Aircraft>) => void;
   removeAircraft: (id: string) => void;
+  unbindAircraft: (id: string) => void;
   getAvailableAircraft: () => Aircraft[];
+
+  addEnterpriseMaterial: (material: Omit<EnterpriseMaterial, 'id' | 'uploadedAt' | 'status'>) => void;
+  removeEnterpriseMaterial: (materialId: string) => void;
 
   updateUser: (updates: Partial<User>) => void;
   isBlacklisted: () => boolean;
@@ -327,12 +332,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     const declaration = getDeclarationById(id);
     if (!declaration) return;
 
-    updateDeclaration(id, { status: 'reviewing' });
+    updateDeclaration(id, {
+      status: 'changing',
+      changeReason: reason,
+      changeRequestedAt: new Date().toISOString(),
+    });
 
     addMessage({
       type: 'review',
       title: '变更申请已提交',
       content: `您的"${declaration.title}"变更申请已提交，原因：${reason}。请等待审核。`,
+      declarationId: id,
+    });
+
+    addMessage({
+      type: 'system',
+      title: '变更申请受理中',
+      content: `您的"${declaration.title}"变更申请正在受理，请耐心等待审核结果。`,
       declarationId: id,
     });
   },
@@ -377,9 +393,38 @@ export const useAppStore = create<AppState>((set, get) => ({
       aircraft: state.aircraft.filter((ac) => ac.id !== id),
     })),
 
+  unbindAircraft: (id) =>
+    set((state) => ({
+      aircraft: state.aircraft.map((ac) =>
+        ac.id === id ? { ...ac, status: 'unbound' as const } : ac
+      ),
+    })),
+
   getAvailableAircraft: () => {
     const { aircraft } = get();
     return aircraft.filter((ac) => ac.status === 'bound');
+  },
+
+  addEnterpriseMaterial: (material) => {
+    const { updateUser, user } = get();
+    const newMaterial: EnterpriseMaterial = {
+      ...material,
+      id: generateId(),
+      uploadedAt: new Date().toISOString(),
+      status: 'uploaded',
+    };
+    const currentMaterials = user.enterpriseMaterials || [];
+    updateUser({
+      enterpriseMaterials: [...currentMaterials, newMaterial],
+    });
+  },
+
+  removeEnterpriseMaterial: (materialId) => {
+    const { updateUser, user } = get();
+    const currentMaterials = user.enterpriseMaterials || [];
+    updateUser({
+      enterpriseMaterials: currentMaterials.filter((m) => m.id !== materialId),
+    });
   },
 
   updateUser: (updates) =>

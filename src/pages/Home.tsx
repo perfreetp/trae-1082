@@ -39,9 +39,13 @@ export default function Home() {
 
   const stats = {
     total: declarations.length,
-    reviewing: declarations.filter((d) => d.status === 'reviewing' || d.status === 'submitted').length,
+    reviewing: declarations.filter((d) =>
+      ['reviewing', 'submitted', 'changing'].includes(d.status)
+    ).length,
     approved: declarations.filter((d) => d.status === 'approved').length,
-    rejected: declarations.filter((d) => d.status === 'rejected' || d.status === 'correction').length,
+    rejected: declarations.filter((d) =>
+      ['rejected', 'correction', 'revoked'].includes(d.status)
+    ).length,
   };
 
   const unreadMessages = messages.filter((m) => !m.read).slice(0, 3);

@@ -4,6 +4,7 @@ export type DeclarationStatus =
   | 'draft'
   | 'submitted'
   | 'reviewing'
+  | 'changing'
   | 'correction'
   | 'approved'
   | 'rejected'
@@ -51,6 +52,8 @@ export interface EnterpriseMaterial {
   name: string;
   url: string;
   uploadedAt: string;
+  status: 'uploaded' | 'verified' | 'rejected';
+  size?: number;
 }
 
 export interface Aircraft {
@@ -117,6 +120,8 @@ export interface Declaration {
   submittedAt?: string;
   approvedAt?: string;
   licenceExpiry?: string;
+  changeReason?: string;
+  changeRequestedAt?: string;
   flightPlan?: FlightPlan;
   materials: Material[];
   reviewSteps?: ReviewStep[];
