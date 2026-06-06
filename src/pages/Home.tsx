@@ -102,8 +102,9 @@ export default function Home() {
             </p>
           </div>
           <button
-            onClick={() => navigate('/flight-plan')}
-            className="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
+            onClick={handleNewDeclaration}
+            className={`${blacklisted ? 'bg-gray-300 cursor-not-allowed' : 'bg-white hover:bg-blue-50'} text-blue-600 px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2`}
+            disabled={blacklisted}
           >
             <PlusCircle className="w-5 h-5" />
             新建申报

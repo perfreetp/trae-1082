@@ -354,7 +354,7 @@ export default function Qualification() {
                       </div>
                       <div className="flex items-center gap-2">
                         {mat.status === 'verified' && (
-                          <CheckCircle className="w-5 h-5 text-green-500" title="已审核" />
+                          <CheckCircle className="w-5 h-5 text-green-500" />
                         )}
                         {mat.status === 'uploaded' && (
                           <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-600 rounded">审核中</span>

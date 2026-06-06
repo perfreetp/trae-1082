@@ -25,11 +25,13 @@ import {
 import { formatDate } from '@/utils';
 import type { DeclarationStatus, TaskType } from '@/types';
 
+type StatusFilterType = DeclarationStatus | 'all' | 'change_completed' | 'change_failed';
+
 export default function Archive() {
   const navigate = useNavigate();
   const { declarations, downloadLicence, generateLicence } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<DeclarationStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
   const [taskTypeFilter, setTaskTypeFilter] = useState<TaskType | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -38,7 +40,18 @@ export default function Archive() {
     const matchSearch =
       dec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       dec.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === 'all' || dec.status === statusFilter;
+
+    let matchStatus = true;
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'change_completed') {
+        matchStatus = dec.lastChangeResult === 'approved' || dec.status === 'change_approved';
+      } else if (statusFilter === 'change_failed') {
+        matchStatus = dec.lastChangeResult === 'rejected' || dec.status === 'change_rejected';
+      } else {
+        matchStatus = dec.status === statusFilter;
+      }
+    }
+
     const matchTaskType = taskTypeFilter === 'all' || dec.taskType === taskTypeFilter;
     return matchSearch && matchStatus && matchTaskType;
   });
@@ -134,10 +147,12 @@ export default function Archive() {
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as DeclarationStatus | 'all')}
+                  onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)}
                   className="pl-9 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
                 >
                   <option value="all">全部状态</option>
+                  <option value="change_completed">变更完成</option>
+                  <option value="change_failed">变更失败</option>
                   {Object.entries(statusLabels).map(([key, label]) => (
                     <option key={key} value={key}>
                       {label}

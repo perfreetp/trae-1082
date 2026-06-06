@@ -824,6 +824,66 @@ export default function Review() {
                   </div>
                 </div>
               )}
+
+              {selectedDeclaration.disposalRecords && selectedDeclaration.disposalRecords.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-6 mt-6">
+                  <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-blue-500" />
+                    处置时间线
+                  </h4>
+                  <div className="relative">
+                    {selectedDeclaration.disposalRecords
+                      .sort((a, b) => new Date(b.operatedAt).getTime() - new Date(a.operatedAt).getTime())
+                      .map((record, index) => (
+                        <div key={record.id} className="relative pb-6 last:pb-0">
+                          {index < selectedDeclaration.disposalRecords!.length - 1 && (
+                            <div className="absolute left-3 top-8 w-0.5 h-full bg-gray-200" />
+                          )}
+                          <div className="flex items-start gap-4">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              record.type.includes('approve') ? 'bg-green-500' :
+                              record.type.includes('reject') ? 'bg-red-500' :
+                              record.type.includes('change') ? 'bg-purple-500' :
+                              record.type.includes('correction') ? 'bg-orange-500' :
+                              record.type === 'revoke' ? 'bg-gray-500' :
+                              'bg-blue-500'
+                            }`}>
+                              {record.type.includes('approve') ? (
+                                <CheckCircle className="w-4 h-4 text-white" />
+                              ) : record.type.includes('reject') ? (
+                                <XCircle className="w-4 h-4 text-white" />
+                              ) : record.type.includes('change') ? (
+                                <RefreshCw className="w-4 h-4 text-white" />
+                              ) : record.type.includes('correction') ? (
+                                <Edit3 className="w-4 h-4 text-white" />
+                              ) : record.type === 'revoke' ? (
+                                <XCircle className="w-4 h-4 text-white" />
+                              ) : (
+                                <Send className="w-4 h-4 text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <h5 className="font-medium text-gray-800">{record.title}</h5>
+                                <span className="text-sm text-gray-500">
+                                  {record.operator} · {formatDateTime(record.operatedAt)}
+                                </span>
+                              </div>
+                              {record.description && (
+                                <p className="mt-1 text-sm text-gray-600">{record.description}</p>
+                              )}
+                              {record.opinion && (
+                                <p className="mt-2 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+                                  {record.opinion}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-400">

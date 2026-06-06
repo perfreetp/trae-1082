@@ -13,6 +13,7 @@ import type {
   FlightPlan,
   EnterpriseMaterial,
   ChangeRecord,
+  DisposalRecord,
 } from '@/types';
 import {
   mockUser,
@@ -263,10 +264,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const reviewSteps = createInitialReviewSteps(id);
     reviewSteps[0].status = 'processing';
 
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'submit',
+      title: '提交申报',
+      operator: '申请人',
+      operatedAt: new Date().toISOString(),
+    };
+
     updateDeclaration(id, {
       status: 'reviewing',
       submittedAt: new Date().toISOString(),
       reviewSteps,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
 
     addMessage({
@@ -307,7 +318,21 @@ export const useAppStore = create<AppState>((set, get) => ({
         : step
     ) || createInitialReviewSteps(id);
 
-    updateDeclaration(id, { status: 'correction', reviewSteps });
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'correction_request',
+      title: '要求补正材料',
+      operator: '审核员',
+      operatedAt: new Date().toISOString(),
+      opinion,
+    };
+
+    updateDeclaration(id, {
+      status: 'correction',
+      reviewSteps,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
+    });
 
     addMessage({
       type: 'review',
@@ -327,9 +352,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       status: step.stepOrder === 1 ? 'processing' as const : 'pending' as const,
     })) || createInitialReviewSteps(id);
 
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'correction_submit',
+      title: '补正材料重新提交',
+      operator: '申请人',
+      operatedAt: new Date().toISOString(),
+    };
+
     updateDeclaration(id, {
       status: 'reviewing',
       reviewSteps,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
 
     addMessage({
@@ -355,11 +390,22 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const existingChanges = declaration.changeRecords || [];
 
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'change_request',
+      title: '提交变更申请',
+      description: reason,
+      operator: '申请人',
+      operatedAt: new Date().toISOString(),
+    };
+
     updateDeclaration(id, {
       status: 'changing',
       changeReason: reason,
       changeRequestedAt: new Date().toISOString(),
       changeRecords: [...existingChanges, changeRecord],
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
 
     addMessage({
@@ -381,9 +427,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         : cr
     );
 
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'change_accept',
+      title: '受理变更申请',
+      operator: '审核员',
+      operatedAt: new Date().toISOString(),
+    };
+
     updateDeclaration(id, {
       status: 'change_reviewing',
       changeRecords,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
 
     addMessage({
@@ -405,9 +461,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         : cr
     );
 
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'change_supplement',
+      title: '要求补充变更说明',
+      operator: '审核员',
+      operatedAt: new Date().toISOString(),
+      opinion,
+    };
+
     updateDeclaration(id, {
       status: 'change_reviewing',
       changeRecords,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
 
     addMessage({
@@ -436,16 +503,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         : cr
     );
 
-    const baseStatus = declaration.submittedAt ? 'reviewing' : 'draft';
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'change_approve',
+      title: '变更申请通过',
+      operator: '审核员',
+      operatedAt: new Date().toISOString(),
+      opinion,
+    };
 
     updateDeclaration(id, {
       status: 'change_approved',
       changeRecords,
+      lastChangeResult: 'approved',
+      lastChangeProcessedAt: new Date().toISOString(),
+      lastChangeProcessor: '审核员',
+      lastChangeOpinion: opinion,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
-
-    setTimeout(() => {
-      updateDeclaration(id, { status: baseStatus });
-    }, 2000);
 
     addMessage({
       type: 'change',
@@ -461,7 +537,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!declaration) return;
 
     const changeRecords = declaration.changeRecords?.map((cr) =>
-      cr.status === 'reviewing' || cr.status === 'supplement'
+      cr.status === 'reviewing' || cr.status === 'supplement' || cr.status === 'requested'
         ? {
             ...cr,
             status: 'rejected' as const,
@@ -473,16 +549,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         : cr
     );
 
-    const baseStatus = declaration.submittedAt ? 'reviewing' : 'draft';
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'change_reject',
+      title: '变更申请驳回',
+      operator: '审核员',
+      operatedAt: new Date().toISOString(),
+      opinion,
+    };
 
     updateDeclaration(id, {
       status: 'change_rejected',
       changeRecords,
+      lastChangeResult: 'rejected',
+      lastChangeProcessedAt: new Date().toISOString(),
+      lastChangeProcessor: '审核员',
+      lastChangeOpinion: opinion,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
-
-    setTimeout(() => {
-      updateDeclaration(id, { status: baseStatus });
-    }, 2000);
 
     addMessage({
       type: 'change',
@@ -497,7 +582,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const declaration = getDeclarationById(id);
     if (!declaration) return;
 
-    updateDeclaration(id, { status: 'revoked' });
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'revoke',
+      title: '撤销申报',
+      description: reason,
+      operator: '申请人',
+      operatedAt: new Date().toISOString(),
+    };
+
+    updateDeclaration(id, {
+      status: 'revoked',
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
+    });
 
     addMessage({
       type: 'review',
@@ -524,11 +622,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     const expiryDate = new Date(now);
     expiryDate.setDate(expiryDate.getDate() + 90);
 
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'approve',
+      title: '审核通过',
+      operator: '审核员',
+      operatedAt: new Date().toISOString(),
+      opinion: '审核通过',
+    };
+
     updateDeclaration(id, {
       status: 'approved',
       reviewSteps,
       approvedAt: now.toISOString(),
       licenceExpiry: expiryDate.toISOString(),
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
 
     const licence = generateLicence(id);
@@ -554,9 +663,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       reviewedAt: new Date().toISOString(),
     })) || createInitialReviewSteps(id);
 
+    const disposalRecord: DisposalRecord = {
+      id: generateId(),
+      declarationId: id,
+      type: 'reject',
+      title: '审核驳回',
+      operator: '审核员',
+      operatedAt: new Date().toISOString(),
+      opinion,
+    };
+
     updateDeclaration(id, {
       status: 'rejected',
       reviewSteps,
+      disposalRecords: [...(declaration.disposalRecords || []), disposalRecord],
     });
 
     addMessage({

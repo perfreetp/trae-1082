@@ -13,6 +13,19 @@ export type DeclarationStatus =
   | 'rejected'
   | 'revoked';
 
+export type DisposalType =
+  | 'submit'
+  | 'correction_request'
+  | 'correction_submit'
+  | 'approve'
+  | 'reject'
+  | 'change_request'
+  | 'change_accept'
+  | 'change_supplement'
+  | 'change_approve'
+  | 'change_reject'
+  | 'revoke';
+
 export type TaskType =
   | 'aerial_photography'
   | 'mapping'
@@ -125,6 +138,17 @@ export interface ChangeRecord {
   result?: 'approved' | 'rejected';
 }
 
+export interface DisposalRecord {
+  id: string;
+  declarationId: string;
+  type: DisposalType;
+  title: string;
+  description?: string;
+  operator: string;
+  operatedAt: string;
+  opinion?: string;
+}
+
 export interface Declaration {
   id: string;
   userId: string;
@@ -143,6 +167,11 @@ export interface Declaration {
   changeReason?: string;
   changeRequestedAt?: string;
   changeRecords?: ChangeRecord[];
+  disposalRecords?: DisposalRecord[];
+  lastChangeResult?: 'approved' | 'rejected';
+  lastChangeProcessedAt?: string;
+  lastChangeProcessor?: string;
+  lastChangeOpinion?: string;
   flightPlan?: FlightPlan;
   materials: Material[];
   reviewSteps?: ReviewStep[];
