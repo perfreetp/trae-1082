@@ -17,6 +17,7 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="qualification" element={<Qualification />} />
           <Route path="flight-plan" element={<FlightPlan />} />
+          <Route path="flight-plan/:id" element={<FlightPlan />} />
           <Route path="materials" element={<Materials />} />
           <Route path="review" element={<Review />} />
           <Route path="messages" element={<Messages />} />

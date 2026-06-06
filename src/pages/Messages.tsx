@@ -18,7 +18,7 @@ type FilterType = 'all' | MessageType;
 
 export default function Messages() {
   const navigate = useNavigate();
-  const { messages, markMessageAsRead, markAllMessagesAsRead } = useAppStore();
+  const { messages, markMessageAsRead, markAllMessagesAsRead, deleteMessage } = useAppStore();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
   const filters: { key: FilterType; label: string; icon: typeof Bell }[] = [
@@ -164,11 +164,14 @@ export default function Messages() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (confirm('确定要删除这条消息吗？')) {
+                          deleteMessage(msg.id);
+                        }
                       }}
-                      className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-1.5 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors"
                       title="删除"
                     >
-                      <Trash2 className="w-4 h-4 text-gray-400" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>

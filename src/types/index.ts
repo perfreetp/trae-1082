@@ -27,6 +27,8 @@ export type ReviewStepStatus = 'pending' | 'processing' | 'completed' | 'rejecte
 
 export type MaterialStatus = 'uploaded' | 'verified' | 'rejected';
 
+export type AirspaceType = 'controlled' | 'restricted' | 'prohibited' | 'uncontrolled';
+
 export interface User {
   id: string;
   name: string;
@@ -38,6 +40,17 @@ export interface User {
   avatar?: string;
   realNameVerified: boolean;
   enterpriseVerified: boolean;
+  idCardFront?: string;
+  idCardBack?: string;
+  verificationDate?: string;
+  enterpriseMaterials?: EnterpriseMaterial[];
+}
+
+export interface EnterpriseMaterial {
+  id: string;
+  name: string;
+  url: string;
+  uploadedAt: string;
 }
 
 export interface Aircraft {
@@ -48,6 +61,8 @@ export interface Aircraft {
   airworthinessCert: string;
   status: AircraftStatus;
   boundAt: string;
+  expiryDate?: string | null;
+  airworthinessExpiry?: string;
 }
 
 export interface FlightPlan {
@@ -61,6 +76,7 @@ export interface FlightPlan {
   endTime: string;
   frequency: string;
   aircraftIds: string[];
+  description?: string;
 }
 
 export interface Material {
@@ -72,6 +88,7 @@ export interface Material {
   size: number;
   required: boolean;
   status: MaterialStatus;
+  uploadedAt: string;
 }
 
 export interface ReviewStep {
@@ -89,14 +106,19 @@ export interface Declaration {
   id: string;
   userId: string;
   title: string;
+  description?: string;
   status: DeclarationStatus;
   taskType: TaskType;
   riskLevel: RiskLevel;
   riskScore: number;
+  riskAnswers?: number[];
   createdAt: string;
   updatedAt: string;
+  submittedAt?: string;
+  approvedAt?: string;
+  licenceExpiry?: string;
   flightPlan?: FlightPlan;
-  materials?: Material[];
+  materials: Material[];
   reviewSteps?: ReviewStep[];
 }
 
@@ -124,9 +146,31 @@ export interface BlacklistRecord {
 export interface AirspaceInfo {
   id: string;
   name: string;
-  type: 'controlled' | 'restricted' | 'prohibited' | 'uncontrolled';
+  type: AirspaceType;
   coordinates: string;
   altitudeMin: number;
   altitudeMax: number;
   description: string;
+}
+
+export interface MaterialTemplate {
+  type: string;
+  name: string;
+  required: boolean;
+  description: string;
+}
+
+export interface LicenceData {
+  declarationId: string;
+  declarationTitle: string;
+  airspaceName: string;
+  altitudeMin: number;
+  altitudeMax: number;
+  startTime: string;
+  endTime: string;
+  aircraftModels: string[];
+  applicant: string;
+  licenceNo: string;
+  issuedAt: string;
+  expiryAt: string;
 }

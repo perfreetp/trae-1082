@@ -26,7 +26,7 @@ import type { DeclarationStatus, TaskType } from '@/types';
 
 export default function Archive() {
   const navigate = useNavigate();
-  const { declarations } = useAppStore();
+  const { declarations, downloadLicence, generateLicence } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DeclarationStatus | 'all'>('all');
   const [taskTypeFilter, setTaskTypeFilter] = useState<TaskType | 'all'>('all');
@@ -225,7 +225,10 @@ export default function Archive() {
                         查看
                       </button>
                       {dec.status === 'approved' && (
-                        <button className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                        <button
+                          onClick={() => downloadLicence(dec.id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        >
                           <Download className="w-4 h-4" />
                           下载
                         </button>
@@ -287,28 +290,34 @@ export default function Archive() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">许可文件</h3>
           <div className="space-y-3">
-            {approvedDeclarations.slice(0, 3).map((dec) => (
-              <div
-                key={dec.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <FileText className="w-6 h-6 text-blue-600" />
+            {approvedDeclarations.slice(0, 3).map((dec) => {
+              const licence = generateLicence(dec.id);
+              return (
+                <div
+                  key={dec.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <FileText className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800">{dec.title}</p>
+                      <p className="text-sm text-gray-500">
+                        许可编号：{licence?.licenceNo || `FLY-${dec.id.toUpperCase()}`} · 有效期至：{licence ? formatDate(licence.expiryAt) : '2024-12-31'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-800">{dec.title}</p>
-                    <p className="text-sm text-gray-500">
-                      许可编号：FLY-{dec.id.toUpperCase()} · 有效期至：2024-12-31
-                    </p>
-                  </div>
+                  <button
+                    onClick={() => downloadLicence(dec.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    下载
+                  </button>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors">
-                  <Download className="w-4 h-4" />
-                  下载
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import type {
   Message,
   BlacklistRecord,
   AirspaceInfo,
+  MaterialTemplate,
 } from '@/types';
 
 export const mockUser: User = {
@@ -28,6 +29,7 @@ export const mockAircraft: Aircraft[] = [
     airworthinessCert: 'AW-2024-0001',
     status: 'bound',
     boundAt: '2024-01-15T00:00:00Z',
+    expiryDate: '2025-01-15',
   },
   {
     id: 'ac_002',
@@ -37,6 +39,7 @@ export const mockAircraft: Aircraft[] = [
     airworthinessCert: 'AW-2024-0002',
     status: 'bound',
     boundAt: '2024-02-20T00:00:00Z',
+    expiryDate: '2025-02-20',
   },
   {
     id: 'ac_003',
@@ -46,6 +49,7 @@ export const mockAircraft: Aircraft[] = [
     airworthinessCert: 'AW-2024-0003',
     status: 'expired',
     boundAt: '2023-06-10T00:00:00Z',
+    expiryDate: '2024-06-10',
   },
 ];
 
@@ -82,6 +86,7 @@ export const mockDeclarations: Declaration[] = [
         size: 1024000,
         required: true,
         status: 'verified',
+        uploadedAt: '2024-06-01T10:00:00Z',
       },
       {
         id: 'mat_002',
@@ -92,6 +97,7 @@ export const mockDeclarations: Declaration[] = [
         size: 512000,
         required: true,
         status: 'verified',
+        uploadedAt: '2024-06-01T10:05:00Z',
       },
     ],
     reviewSteps: [
@@ -169,6 +175,7 @@ export const mockDeclarations: Declaration[] = [
         size: 1024000,
         required: true,
         status: 'verified',
+        uploadedAt: '2024-06-05T11:00:00Z',
       },
       {
         id: 'mat_004',
@@ -179,6 +186,7 @@ export const mockDeclarations: Declaration[] = [
         size: 2048000,
         required: true,
         status: 'verified',
+        uploadedAt: '2024-06-05T11:10:00Z',
       },
     ],
     reviewSteps: [
@@ -248,6 +256,7 @@ export const mockDeclarations: Declaration[] = [
         size: 1024000,
         required: true,
         status: 'verified',
+        uploadedAt: '2024-06-04T09:00:00Z',
       },
     ],
     reviewSteps: [
@@ -470,3 +479,42 @@ export const riskLevelColors: Record<string, string> = {
   medium: 'bg-yellow-100 text-yellow-600',
   high: 'bg-red-100 text-red-600',
 };
+
+export const materialTemplates: MaterialTemplate[] = [
+  {
+    type: 'application',
+    name: '飞行任务申请书',
+    required: true,
+    description: '填写完整的飞行任务申请表格',
+  },
+  {
+    type: 'certificate',
+    name: '飞行器适航证',
+    required: true,
+    description: '有效的飞行器适航证书扫描件',
+  },
+  {
+    type: 'plan',
+    name: '作业方案',
+    required: true,
+    description: '详细的飞行作业方案和安全措施',
+  },
+  {
+    type: 'insurance',
+    name: '第三者责任险',
+    required: true,
+    description: '有效的第三者责任保险单',
+  },
+  {
+    type: 'pilot_license',
+    name: '驾驶员执照',
+    required: false,
+    description: '无人机驾驶员执照（可选）',
+  },
+  {
+    type: 'other',
+    name: '其他补充材料',
+    required: false,
+    description: '其他需要补充的证明材料',
+  },
+];

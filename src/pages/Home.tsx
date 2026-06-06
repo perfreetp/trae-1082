@@ -11,6 +11,8 @@ import {
   ChevronRight,
   TrendingUp,
   BarChart3,
+  Bell,
+  Ban,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { statusLabels, statusColors, taskTypeLabels } from '@/data/mockData';
@@ -28,7 +30,12 @@ const monthlyData = [
 
 export default function Home() {
   const navigate = useNavigate();
-  const { declarations, messages } = useAppStore();
+  const { declarations, messages, isBlacklisted, getBlacklistRecord, setCurrentDeclaration } = useAppStore();
+  const blacklisted = isBlacklisted();
+  const blacklistRecord = getBlacklistRecord();
+
+  const draftDeclarations = declarations.filter((d) => d.status === 'draft');
+  const latestDraft = draftDeclarations.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
 
   const stats = {
     total: declarations.length,
@@ -40,29 +47,23 @@ export default function Home() {
   const unreadMessages = messages.filter((m) => !m.read).slice(0, 3);
   const recentDeclarations = declarations.slice(0, 3);
 
-  const quickActions = [
-    {
-      icon: PlusCircle,
-      title: '新建申报',
-      desc: '开始新的飞行计划申报',
-      path: '/flight-plan',
-      color: 'bg-blue-500 hover:bg-blue-600',
-    },
-    {
-      icon: FileEdit,
-      title: '继续草稿',
-      desc: '继续编辑未完成的申报',
-      path: '/flight-plan',
-      color: 'bg-green-500 hover:bg-green-600',
-    },
-    {
-      icon: UserCheck,
-      title: '资质管理',
-      desc: '完善主体和飞行器资质',
-      path: '/qualification',
-      color: 'bg-purple-500 hover:bg-purple-600',
-    },
-  ];
+  const handleNewDeclaration = () => {
+    if (blacklisted) {
+      alert('您已被列入黑名单，无法进行新的申报。如有异议，请联系监管部门申诉。');
+      return;
+    }
+    setCurrentDeclaration(null);
+    navigate('/flight-plan');
+  };
+
+  const handleContinueDraft = () => {
+    if (latestDraft) {
+      setCurrentDeclaration(latestDraft.id);
+      navigate(`/flight-plan/${latestDraft.id}`);
+    } else {
+      alert('暂无可继续编辑的草稿');
+    }
+  };
 
   const statCards = [
     { label: '申报总数', value: stats.total, icon: FileText, color: 'bg-blue-500', bgColor: 'bg-blue-50' },
@@ -73,6 +74,21 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
+      {blacklisted && blacklistRecord && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <Ban className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-red-800">黑名单限制提示</h4>
+              <p className="text-sm text-red-700 mt-1">
+                您已被列入黑名单（原因：{blacklistRecord.reason}），处罚期至 {formatDate(blacklistRecord.expiryDate)}。
+                在此期间无法进行新的飞行申报。如有异议可提交申诉。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
@@ -133,20 +149,43 @@ export default function Home() {
             <h3 className="text-lg font-semibold text-gray-800">快捷操作</h3>
           </div>
           <div className="space-y-3">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={() => navigate(action.path)}
-                className={`w-full ${action.color} text-white p-4 rounded-lg transition-all hover:shadow-md flex items-center gap-3`}
-              >
-                <action.icon className="w-6 h-6" />
-                <div className="text-left flex-1">
-                  <p className="font-medium">{action.title}</p>
-                  <p className="text-xs opacity-90">{action.desc}</p>
-                </div>
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            ))}
+            <button
+              onClick={handleNewDeclaration}
+              className={`w-full ${blacklisted ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white p-4 rounded-lg transition-all hover:shadow-md flex items-center gap-3`}
+              disabled={blacklisted}
+            >
+              <PlusCircle className="w-6 h-6" />
+              <div className="text-left flex-1">
+                <p className="font-medium">新建申报</p>
+                <p className="text-xs opacity-90">开始新的飞行计划申报</p>
+              </div>
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleContinueDraft}
+              className={`w-full ${draftDeclarations.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'} text-white p-4 rounded-lg transition-all hover:shadow-md flex items-center gap-3`}
+              disabled={draftDeclarations.length === 0}
+            >
+              <FileEdit className="w-6 h-6" />
+              <div className="text-left flex-1">
+                <p className="font-medium">继续草稿</p>
+                <p className="text-xs opacity-90">
+                  {draftDeclarations.length > 0 ? `${draftDeclarations.length} 份草稿待编辑` : '暂无可编辑的草稿'}
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => navigate('/qualification')}
+              className="w-full bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-lg transition-all hover:shadow-md flex items-center gap-3"
+            >
+              <UserCheck className="w-6 h-6" />
+              <div className="text-left flex-1">
+                <p className="font-medium">资质管理</p>
+                <p className="text-xs opacity-90">完善主体和飞行器资质</p>
+              </div>
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>

@@ -16,11 +16,13 @@ import { useAppStore } from '@/store';
 import { formatDate, maskIdCard } from '@/utils';
 
 type TabType = 'airspace' | 'blacklist';
+type AirspaceTypeFilter = 'all' | 'controlled' | 'restricted' | 'prohibited' | 'uncontrolled';
 
 export default function Supervision() {
   const { airspaces, blacklist } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('airspace');
   const [searchQuery, setSearchQuery] = useState('');
+  const [airspaceTypeFilter, setAirspaceTypeFilter] = useState<AirspaceTypeFilter>('all');
   const [expandedBlacklist, setExpandedBlacklist] = useState<string | null>(null);
 
   const tabs = [
@@ -42,11 +44,13 @@ export default function Supervision() {
     uncontrolled: 'bg-green-100 text-green-700',
   };
 
-  const filteredAirspaces = airspaces.filter(
-    (as) =>
+  const filteredAirspaces = airspaces.filter((as) => {
+    const matchSearch =
       as.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      as.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      as.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchType = airspaceTypeFilter === 'all' || as.type === airspaceTypeFilter;
+    return matchSearch && matchType;
+  });
 
   const filteredBlacklist = blacklist.filter(
     (bl) =>
@@ -95,23 +99,29 @@ export default function Supervision() {
 
           {activeTab === 'airspace' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-sm text-gray-600">非管制空域</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <span className="text-sm text-gray-600">管制空域</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-orange-500" />
-                  <span className="text-sm text-gray-600">限制空域</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span className="text-sm text-gray-600">禁止空域</span>
-                </div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {[
+                  { key: 'all', label: '全部' },
+                  { key: 'uncontrolled', label: '非管制', color: 'bg-green-500' },
+                  { key: 'controlled', label: '管制', color: 'bg-yellow-500' },
+                  { key: 'restricted', label: '限制', color: 'bg-orange-500' },
+                  { key: 'prohibited', label: '禁止', color: 'bg-red-500' },
+                ].map((type) => (
+                  <button
+                    key={type.key}
+                    onClick={() => setAirspaceTypeFilter(type.key as AirspaceTypeFilter)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      airspaceTypeFilter === type.key
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {type.color && (
+                      <div className={`w-2 h-2 rounded-full ${type.color}`} />
+                    )}
+                    {type.label}
+                  </button>
+                ))}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
