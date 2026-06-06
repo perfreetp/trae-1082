@@ -18,10 +18,12 @@ import {
   Gauge,
   AlertCircle,
   CheckCircle,
+  Ban,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import type { TaskType, RiskLevel, Declaration, FlightPlan as FlightPlanType } from '@/types';
 import { taskTypeLabels } from '@/data/mockData';
+import { formatDate } from '@/utils';
 
 type StepType = 'basic' | 'airspace' | 'risk' | 'confirm';
 
@@ -153,6 +155,7 @@ export default function FlightPlan() {
   const riskResult = calculateRiskScore();
   const availableAircraft = getAvailableAircraft();
   const blacklistRecord = getBlacklistRecord();
+  const isBlocked = isBlacklisted() && !editId;
 
   const validateBasic = (): boolean => {
     if (!formData.title.trim()) {
@@ -315,22 +318,73 @@ export default function FlightPlan() {
     navigate('/materials');
   };
 
+  if (isBlocked && blacklistRecord) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Ban className="w-10 h-10 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">申报受限</h2>
+          <p className="text-gray-500 mb-6">您当前处于黑名单中，无法发起新的飞行申报</p>
+          
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-left max-w-lg mx-auto mb-6">
+            <h3 className="font-semibold text-red-800 mb-3">黑名单详情</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex">
+                <span className="text-red-600 w-20">限制原因：</span>
+                <span className="text-gray-800">{blacklistRecord.reason}</span>
+              </div>
+              <div className="flex">
+                <span className="text-red-600 w-20">处罚日期：</span>
+                <span className="text-gray-800">{formatDate(blacklistRecord.penaltyDate)}</span>
+              </div>
+              <div className="flex">
+                <span className="text-red-600 w-20">到期日期：</span>
+                <span className="text-gray-800">{formatDate(blacklistRecord.expiryDate)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left max-w-lg mx-auto mb-6">
+            <h3 className="font-semibold text-blue-800 mb-2">申诉渠道</h3>
+            <p className="text-sm text-blue-700">
+              如您对黑名单处罚有异议，可通过以下方式申诉：
+            </p>
+            <ul className="text-sm text-blue-600 mt-2 space-y-1 list-disc list-inside">
+              <li>拨打监管热线：400-XXX-XXXX</li>
+              <li>发送邮件至：supervision@example.gov.cn</li>
+              <li>前往当地空管部门提交书面申诉材料</li>
+            </ul>
+          </div>
+
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {showBlacklistWarning && blacklistRecord && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      {showBlacklistWarning && blacklistRecord && editId && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-red-800">黑名单限制提示</p>
-              <p className="text-sm text-red-600 mt-1">
-                您当前处于黑名单中（原因：{blacklistRecord.reason}），限制期至 {blacklistRecord.expiryDate}。
-                在此期间您将无法提交新的申报。如有疑问，请联系监管部门申诉。
+              <p className="font-medium text-amber-800">黑名单提示</p>
+              <p className="text-sm text-amber-600 mt-1">
+                您当前处于黑名单中（原因：{blacklistRecord.reason}），限制期至 {formatDate(blacklistRecord.expiryDate)}。
+                您可以继续编辑草稿，但无法提交新的申报。
               </p>
             </div>
             <button
               onClick={() => setShowBlacklistWarning(false)}
-              className="ml-auto text-red-500 hover:text-red-700"
+              className="ml-auto text-amber-500 hover:text-amber-700"
             >
               ×
             </button>

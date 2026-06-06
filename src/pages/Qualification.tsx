@@ -48,7 +48,7 @@ export default function Qualification() {
 
   const aircraftStatusLabels: Record<string, string> = {
     bound: '已绑定',
-    unbound: '未绑定',
+    unbound: '已解绑',
     expired: '已过期',
   };
 

@@ -9,6 +9,7 @@ import {
   CheckCheck,
   Trash2,
   ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { formatDateTime } from '@/utils';
@@ -25,6 +26,7 @@ export default function Messages() {
     { key: 'all', label: '全部消息', icon: Bell },
     { key: 'system', label: '系统通知', icon: Bell },
     { key: 'review', label: '审核消息', icon: FileText },
+    { key: 'change', label: '变更消息', icon: RefreshCw },
     { key: 'expiry', label: '到期提醒', icon: Clock },
     { key: 'warning', label: '安全警示', icon: AlertTriangle },
   ];
@@ -40,6 +42,8 @@ export default function Messages() {
         return <Bell className="w-5 h-5 text-blue-500" />;
       case 'review':
         return <FileText className="w-5 h-5 text-purple-500" />;
+      case 'change':
+        return <RefreshCw className="w-5 h-5 text-indigo-500" />;
       case 'expiry':
         return <Clock className="w-5 h-5 text-orange-500" />;
       case 'warning':
@@ -54,6 +58,8 @@ export default function Messages() {
         return 'bg-blue-50';
       case 'review':
         return 'bg-purple-50';
+      case 'change':
+        return 'bg-indigo-50';
       case 'expiry':
         return 'bg-orange-50';
       case 'warning':

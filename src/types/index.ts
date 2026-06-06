@@ -5,6 +5,9 @@ export type DeclarationStatus =
   | 'submitted'
   | 'reviewing'
   | 'changing'
+  | 'change_reviewing'
+  | 'change_approved'
+  | 'change_rejected'
   | 'correction'
   | 'approved'
   | 'rejected'
@@ -20,7 +23,7 @@ export type TaskType =
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
-export type MessageType = 'system' | 'review' | 'expiry' | 'warning';
+export type MessageType = 'system' | 'review' | 'expiry' | 'warning' | 'change';
 
 export type AircraftStatus = 'bound' | 'unbound' | 'expired';
 
@@ -29,6 +32,10 @@ export type ReviewStepStatus = 'pending' | 'processing' | 'completed' | 'rejecte
 export type MaterialStatus = 'uploaded' | 'verified' | 'rejected';
 
 export type AirspaceType = 'controlled' | 'restricted' | 'prohibited' | 'uncontrolled';
+
+export type ChangeStatus = 'requested' | 'reviewing' | 'supplement' | 'approved' | 'rejected';
+
+export type ReviewAction = 'approve' | 'reject' | 'correction';
 
 export interface User {
   id: string;
@@ -105,6 +112,19 @@ export interface ReviewStep {
   reviewedAt?: string;
 }
 
+export interface ChangeRecord {
+  id: string;
+  declarationId: string;
+  reason: string;
+  status: ChangeStatus;
+  requestedAt: string;
+  acceptedAt?: string;
+  processedAt?: string;
+  processor?: string;
+  opinion?: string;
+  result?: 'approved' | 'rejected';
+}
+
 export interface Declaration {
   id: string;
   userId: string;
@@ -122,6 +142,7 @@ export interface Declaration {
   licenceExpiry?: string;
   changeReason?: string;
   changeRequestedAt?: string;
+  changeRecords?: ChangeRecord[];
   flightPlan?: FlightPlan;
   materials: Material[];
   reviewSteps?: ReviewStep[];

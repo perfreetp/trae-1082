@@ -12,6 +12,7 @@ import type {
   LicenceData,
   FlightPlan,
   EnterpriseMaterial,
+  ChangeRecord,
 } from '@/types';
 import {
   mockUser,
@@ -56,10 +57,16 @@ interface AppState {
 
   submitDeclaration: (id: string) => void;
   saveAsDraft: (declaration: Omit<Declaration, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'status' | 'materials'> & { materials?: Material[] }) => string;
-  requestCorrection: (id: string) => void;
+  requestCorrection: (id: string, opinion: string) => void;
   resubmitAfterCorrection: (id: string) => void;
   requestChange: (id: string, reason: string) => void;
+  acceptChange: (id: string) => void;
+  requestChangeSupplement: (id: string, opinion: string) => void;
+  approveChange: (id: string, opinion: string) => void;
+  rejectChange: (id: string, opinion: string) => void;
   requestRevocation: (id: string, reason: string) => void;
+  approveDeclaration: (id: string) => void;
+  rejectDeclaration: (id: string, opinion: string) => void;
 
   addAircraft: (aircraft: Omit<Aircraft, 'id' | 'userId' | 'boundAt'>) => void;
   updateAircraft: (id: string, updates: Partial<Aircraft>) => void;
@@ -289,17 +296,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id;
   },
 
-  requestCorrection: (id) => {
+  requestCorrection: (id, opinion) => {
     const { updateDeclaration, addMessage, getDeclarationById } = get();
     const declaration = getDeclarationById(id);
     if (!declaration) return;
 
-    updateDeclaration(id, { status: 'correction' });
+    const reviewSteps = declaration.reviewSteps?.map((step, index) =>
+      index === 0
+        ? { ...step, status: 'rejected' as const, opinion, reviewer: '审核员', reviewedAt: new Date().toISOString() }
+        : step
+    ) || createInitialReviewSteps(id);
+
+    updateDeclaration(id, { status: 'correction', reviewSteps });
 
     addMessage({
       type: 'review',
       title: '申报需要补正',
-      content: `您的"${declaration.title}"申报需要补充材料，请及时补正后重新提交。`,
+      content: `您的"${declaration.title}"申报需要补充材料：${opinion}。请及时补正后重新提交。`,
       declarationId: id,
     });
   },
@@ -332,23 +345,149 @@ export const useAppStore = create<AppState>((set, get) => ({
     const declaration = getDeclarationById(id);
     if (!declaration) return;
 
+    const changeRecord: ChangeRecord = {
+      id: generateId(),
+      declarationId: id,
+      reason,
+      status: 'requested',
+      requestedAt: new Date().toISOString(),
+    };
+
+    const existingChanges = declaration.changeRecords || [];
+
     updateDeclaration(id, {
       status: 'changing',
       changeReason: reason,
       changeRequestedAt: new Date().toISOString(),
+      changeRecords: [...existingChanges, changeRecord],
     });
 
     addMessage({
-      type: 'review',
+      type: 'change',
       title: '变更申请已提交',
       content: `您的"${declaration.title}"变更申请已提交，原因：${reason}。请等待审核。`,
       declarationId: id,
     });
+  },
+
+  acceptChange: (id) => {
+    const { updateDeclaration, addMessage, getDeclarationById } = get();
+    const declaration = getDeclarationById(id);
+    if (!declaration) return;
+
+    const changeRecords = declaration.changeRecords?.map((cr) =>
+      cr.status === 'requested'
+        ? { ...cr, status: 'reviewing' as const, acceptedAt: new Date().toISOString() }
+        : cr
+    );
+
+    updateDeclaration(id, {
+      status: 'change_reviewing',
+      changeRecords,
+    });
 
     addMessage({
-      type: 'system',
-      title: '变更申请受理中',
-      content: `您的"${declaration.title}"变更申请正在受理，请耐心等待审核结果。`,
+      type: 'change',
+      title: '变更申请已受理',
+      content: `您的"${declaration.title}"变更申请已受理，正在审核中。`,
+      declarationId: id,
+    });
+  },
+
+  requestChangeSupplement: (id, opinion) => {
+    const { updateDeclaration, addMessage, getDeclarationById } = get();
+    const declaration = getDeclarationById(id);
+    if (!declaration) return;
+
+    const changeRecords = declaration.changeRecords?.map((cr) =>
+      cr.status === 'reviewing'
+        ? { ...cr, status: 'supplement' as const, opinion }
+        : cr
+    );
+
+    updateDeclaration(id, {
+      status: 'change_reviewing',
+      changeRecords,
+    });
+
+    addMessage({
+      type: 'change',
+      title: '变更申请需补充说明',
+      content: `您的"${declaration.title}"变更申请需要补充说明：${opinion}。`,
+      declarationId: id,
+    });
+  },
+
+  approveChange: (id, opinion) => {
+    const { updateDeclaration, addMessage, getDeclarationById } = get();
+    const declaration = getDeclarationById(id);
+    if (!declaration) return;
+
+    const changeRecords = declaration.changeRecords?.map((cr) =>
+      cr.status === 'reviewing' || cr.status === 'supplement'
+        ? {
+            ...cr,
+            status: 'approved' as const,
+            processedAt: new Date().toISOString(),
+            processor: '审核员',
+            opinion,
+            result: 'approved' as const,
+          }
+        : cr
+    );
+
+    const baseStatus = declaration.submittedAt ? 'reviewing' : 'draft';
+
+    updateDeclaration(id, {
+      status: 'change_approved',
+      changeRecords,
+    });
+
+    setTimeout(() => {
+      updateDeclaration(id, { status: baseStatus });
+    }, 2000);
+
+    addMessage({
+      type: 'change',
+      title: '变更申请已通过',
+      content: `您的"${declaration.title}"变更申请已通过。处理意见：${opinion}`,
+      declarationId: id,
+    });
+  },
+
+  rejectChange: (id, opinion) => {
+    const { updateDeclaration, addMessage, getDeclarationById } = get();
+    const declaration = getDeclarationById(id);
+    if (!declaration) return;
+
+    const changeRecords = declaration.changeRecords?.map((cr) =>
+      cr.status === 'reviewing' || cr.status === 'supplement'
+        ? {
+            ...cr,
+            status: 'rejected' as const,
+            processedAt: new Date().toISOString(),
+            processor: '审核员',
+            opinion,
+            result: 'rejected' as const,
+          }
+        : cr
+    );
+
+    const baseStatus = declaration.submittedAt ? 'reviewing' : 'draft';
+
+    updateDeclaration(id, {
+      status: 'change_rejected',
+      changeRecords,
+    });
+
+    setTimeout(() => {
+      updateDeclaration(id, { status: baseStatus });
+    }, 2000);
+
+    addMessage({
+      type: 'change',
+      title: '变更申请已驳回',
+      content: `您的"${declaration.title}"变更申请已被驳回。驳回原因：${opinion}`,
       declarationId: id,
     });
   },
@@ -364,6 +503,66 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: 'review',
       title: '撤销申请已提交',
       content: `您的"${declaration.title}"已撤销，原因：${reason}。`,
+      declarationId: id,
+    });
+  },
+
+  approveDeclaration: (id) => {
+    const { updateDeclaration, addMessage, getDeclarationById, generateLicence } = get();
+    const declaration = getDeclarationById(id);
+    if (!declaration) return;
+
+    const reviewSteps = declaration.reviewSteps?.map((step) => ({
+      ...step,
+      status: 'completed' as const,
+      opinion: '审核通过',
+      reviewer: '审核员',
+      reviewedAt: new Date().toISOString(),
+    })) || createInitialReviewSteps(id);
+
+    const now = new Date();
+    const expiryDate = new Date(now);
+    expiryDate.setDate(expiryDate.getDate() + 90);
+
+    updateDeclaration(id, {
+      status: 'approved',
+      reviewSteps,
+      approvedAt: now.toISOString(),
+      licenceExpiry: expiryDate.toISOString(),
+    });
+
+    const licence = generateLicence(id);
+
+    addMessage({
+      type: 'review',
+      title: '申报已通过',
+      content: `恭喜！您的"${declaration.title}"已通过审核，许可编号：${licence?.licenceNo || 'FLY-' + id.toUpperCase()}。请及时下载许可文件。`,
+      declarationId: id,
+    });
+  },
+
+  rejectDeclaration: (id, opinion) => {
+    const { updateDeclaration, addMessage, getDeclarationById } = get();
+    const declaration = getDeclarationById(id);
+    if (!declaration) return;
+
+    const reviewSteps = declaration.reviewSteps?.map((step) => ({
+      ...step,
+      status: step.stepOrder === 4 ? 'rejected' as const : step.status,
+      opinion,
+      reviewer: '审核员',
+      reviewedAt: new Date().toISOString(),
+    })) || createInitialReviewSteps(id);
+
+    updateDeclaration(id, {
+      status: 'rejected',
+      reviewSteps,
+    });
+
+    addMessage({
+      type: 'review',
+      title: '申报已驳回',
+      content: `很抱歉，您的"${declaration.title}"未能通过审核。驳回原因：${opinion}。如有疑问请联系监管部门。`,
       declarationId: id,
     });
   },

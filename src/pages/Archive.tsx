@@ -12,6 +12,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import {
@@ -49,6 +50,15 @@ export default function Archive() {
   );
 
   const approvedDeclarations = declarations.filter((d) => d.status === 'approved');
+  const changingDeclarations = declarations.filter((d) => 
+    d.status === 'changing' || d.status === 'change_reviewing'
+  );
+  const changeCompletedDeclarations = declarations.filter((d) => 
+    d.status === 'change_approved' || (d.changeRecords && d.changeRecords.some(r => r.status === 'approved'))
+  );
+  const changeFailedDeclarations = declarations.filter((d) => 
+    d.status === 'change_rejected' || (d.changeRecords && d.changeRecords.some(r => r.status === 'rejected'))
+  );
 
   return (
     <div className="space-y-6">
@@ -57,7 +67,7 @@ export default function Archive() {
         <p className="text-gray-500 mt-1">查看历史申报记录和许可文件</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -66,6 +76,17 @@ export default function Archive() {
             <div>
               <p className="text-2xl font-bold text-gray-800">{declarations.length}</p>
               <p className="text-sm text-gray-500">总申报数</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <RefreshCw className="w-6 h-6 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-800">{changingDeclarations.length}</p>
+              <p className="text-sm text-gray-500">变更处理中</p>
             </div>
           </div>
         </div>
@@ -90,19 +111,6 @@ export default function Archive() {
                 {declarations.filter((d) => d.status === 'reviewing').length}
               </p>
               <p className="text-sm text-gray-500">审核中</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <XCircle className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-800">
-                {declarations.filter((d) => d.status === 'rejected' || d.status === 'correction').length}
-              </p>
-              <p className="text-sm text-gray-500">待处理</p>
             </div>
           </div>
         </div>
@@ -184,7 +192,15 @@ export default function Archive() {
                 <tr key={dec.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div>
-                      <p className="font-medium text-gray-800">{dec.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-800">{dec.title}</p>
+                        {dec.changeRecords && dec.changeRecords.length > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-600 rounded text-xs">
+                            <RefreshCw className="w-3 h-3" />
+                            {dec.changeRecords.length} 次变更
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 mt-0.5">
                         编号：{dec.id.toUpperCase()}
                       </p>

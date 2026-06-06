@@ -19,6 +19,11 @@ import {
   X,
   Send,
   Plane,
+  ThumbsUp,
+  ThumbsDown,
+  FileCheck,
+  AlertTriangle,
+  Eye,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import {
@@ -28,7 +33,9 @@ import {
   riskLevelLabels,
   riskLevelColors,
 } from '@/data/mockData';
-import { formatDate, formatDateTime } from '@/utils';
+import { formatDate, formatDateTime, formatFileSize } from '@/utils';
+
+type ModalType = 'approve' | 'reject' | 'correction' | 'acceptChange' | 'supplementChange' | 'approveChange' | 'rejectChange' | null;
 
 export default function Review() {
   const navigate = useNavigate();
@@ -45,6 +52,13 @@ export default function Review() {
     getMissingRequiredMaterials,
     isBlacklisted,
     getBlacklistRecord,
+    approveDeclaration,
+    rejectDeclaration,
+    requestCorrection,
+    acceptChange,
+    requestChangeSupplement,
+    approveChange,
+    rejectChange,
   } = useAppStore();
   const blacklisted = isBlacklisted();
   const blacklistRecord = getBlacklistRecord();
@@ -58,6 +72,8 @@ export default function Review() {
   const [changeReason, setChangeReason] = useState('');
   const [revokeReason, setRevokeReason] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [reviewOpinion, setReviewOpinion] = useState('');
 
   useEffect(() => {
     if (selectedId) {
@@ -152,6 +168,111 @@ export default function Review() {
       .join('、');
   };
 
+  const openModal = (type: ModalType) => {
+    setModalType(type);
+    setReviewOpinion('');
+  };
+
+  const closeModal = () => {
+    setModalType(null);
+    setReviewOpinion('');
+  };
+
+  const handleReviewAction = () => {
+    if (!selectedId) return;
+
+    switch (modalType) {
+      case 'approve':
+        approveDeclaration(selectedId);
+        alert('申报已通过！许可文件已生成。');
+        break;
+      case 'reject':
+        if (!reviewOpinion.trim()) {
+          alert('请填写驳回意见');
+          return;
+        }
+        rejectDeclaration(selectedId, reviewOpinion);
+        alert('申报已驳回');
+        break;
+      case 'correction':
+        if (!reviewOpinion.trim()) {
+          alert('请填写补正意见');
+          return;
+        }
+        requestCorrection(selectedId, reviewOpinion);
+        alert('补正通知已发送');
+        break;
+      case 'acceptChange':
+        acceptChange(selectedId);
+        alert('变更申请已受理');
+        break;
+      case 'supplementChange':
+        if (!reviewOpinion.trim()) {
+          alert('请填写补充说明要求');
+          return;
+        }
+        requestChangeSupplement(selectedId, reviewOpinion);
+        alert('补充说明要求已发送');
+        break;
+      case 'approveChange':
+        if (!reviewOpinion.trim()) {
+          alert('请填写审核意见');
+          return;
+        }
+        approveChange(selectedId, reviewOpinion);
+        alert('变更申请已通过');
+        break;
+      case 'rejectChange':
+        if (!reviewOpinion.trim()) {
+          alert('请填写驳回原因');
+          return;
+        }
+        rejectChange(selectedId, reviewOpinion);
+        alert('变更申请已驳回');
+        break;
+    }
+    closeModal();
+  };
+
+  const changeStatusLabels: Record<string, string> = {
+    requested: '已申请',
+    reviewing: '审核中',
+    supplement: '待补充',
+    approved: '已通过',
+    rejected: '已驳回',
+  };
+
+  const changeStatusColors: Record<string, string> = {
+    requested: 'bg-blue-100 text-blue-600',
+    reviewing: 'bg-yellow-100 text-yellow-600',
+    supplement: 'bg-orange-100 text-orange-600',
+    approved: 'bg-green-100 text-green-600',
+    rejected: 'bg-red-100 text-red-600',
+  };
+
+  const getModalConfig = () => {
+    switch (modalType) {
+      case 'approve':
+        return { title: '通过申报', desc: '确认通过此申报？通过后将生成飞行许可文件。', showOpinion: false, confirmText: '确认通过' };
+      case 'reject':
+        return { title: '驳回申报', desc: '请填写驳回原因，申请人将收到通知。', showOpinion: true, confirmText: '确认驳回', opinionLabel: '驳回原因' };
+      case 'correction':
+        return { title: '发补正通知', desc: '请说明需要补正的内容，申请人将收到通知。', showOpinion: true, confirmText: '发送通知', opinionLabel: '补正要求' };
+      case 'acceptChange':
+        return { title: '受理变更申请', desc: '确认受理此变更申请？', showOpinion: false, confirmText: '确认受理' };
+      case 'supplementChange':
+        return { title: '要求补充说明', desc: '请说明需要补充哪些信息。', showOpinion: true, confirmText: '发送要求', opinionLabel: '补充说明要求' };
+      case 'approveChange':
+        return { title: '通过变更申请', desc: '请填写审核意见。', showOpinion: true, confirmText: '确认通过', opinionLabel: '审核意见' };
+      case 'rejectChange':
+        return { title: '驳回变更申请', desc: '请填写驳回原因。', showOpinion: true, confirmText: '确认驳回', opinionLabel: '驳回原因' };
+      default:
+        return { title: '', desc: '', showOpinion: false, confirmText: '确认' };
+    }
+  };
+
+  const modalConfig = getModalConfig();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -168,7 +289,10 @@ export default function Review() {
             <option value="all">全部状态</option>
             <option value="draft">草稿</option>
             <option value="reviewing">审核中</option>
-            <option value="changing">变更中</option>
+            <option value="changing">变更申请中</option>
+            <option value="change_reviewing">变更审核中</option>
+            <option value="change_approved">变更已通过</option>
+            <option value="change_rejected">变更已驳回</option>
             <option value="correction">待补正</option>
             <option value="approved">已通过</option>
             <option value="rejected">已驳回</option>
@@ -300,6 +424,71 @@ export default function Review() {
                           <XCircle className="w-4 h-4" />
                           撤销申请
                         </button>
+                        <div className="border-l border-gray-200 mx-1" />
+                        <button
+                          onClick={() => openModal('approve')}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        >
+                          <ThumbsUp className="w-4 h-4" />
+                          通过
+                        </button>
+                        <button
+                          onClick={() => openModal('correction')}
+                          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          发补正
+                        </button>
+                        <button
+                          onClick={() => openModal('reject')}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                        >
+                          <ThumbsDown className="w-4 h-4" />
+                          驳回
+                        </button>
+                      </>
+                    )}
+                    {(selectedDeclaration.status === 'changing') && (
+                      <>
+                        <button
+                          onClick={() => openModal('acceptChange')}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                          <FileCheck className="w-4 h-4" />
+                          受理变更
+                        </button>
+                        <button
+                          onClick={() => openModal('rejectChange')}
+                          className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                        >
+                          <ThumbsDown className="w-4 h-4" />
+                          直接驳回
+                        </button>
+                      </>
+                    )}
+                    {selectedDeclaration.status === 'change_reviewing' && (
+                      <>
+                        <button
+                          onClick={() => openModal('supplementChange')}
+                          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          要求补充
+                        </button>
+                        <button
+                          onClick={() => openModal('approveChange')}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        >
+                          <ThumbsUp className="w-4 h-4" />
+                          通过变更
+                        </button>
+                        <button
+                          onClick={() => openModal('rejectChange')}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                        >
+                          <ThumbsDown className="w-4 h-4" />
+                          驳回变更
+                        </button>
                       </>
                     )}
                     {selectedDeclaration.status === 'approved' && (
@@ -330,19 +519,19 @@ export default function Review() {
                       </div>
                     )}
                     {selectedDeclaration.status === 'changing' && (
-                      <span className="text-sm text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg">
-                        变更处理中，请等待审核结果
+                      <span className="text-sm text-purple-600 bg-purple-50 px-3 py-2 rounded-lg">
+                        变更处理中，请等待审核
                       </span>
                     )}
                   </div>
                 </div>
 
-                {selectedDeclaration.status === 'changing' && selectedDeclaration.changeReason && (
+                {selectedDeclaration.changeReason && (
                   <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
                     <div className="flex items-start gap-3">
                       <RefreshCw className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="font-medium text-purple-800">变更申请信息</h4>
+                        <h4 className="font-medium text-purple-800">最新变更申请</h4>
                         <p className="text-sm text-purple-600 mt-1">
                           <span className="text-purple-500">变更原因：</span>
                           {selectedDeclaration.changeReason}
@@ -416,7 +605,70 @@ export default function Review() {
                     <p className="text-gray-800">{selectedDeclaration.description}</p>
                   </div>
                 )}
+
+                {selectedDeclaration.materials && selectedDeclaration.materials.length > 0 && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-500 mb-2">已上传材料</p>
+                    <div className="space-y-2">
+                      {selectedDeclaration.materials.map((mat) => (
+                        <div key={mat.id} className="flex items-center justify-between p-2 bg-white rounded">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm text-gray-700">{mat.name}</span>
+                            <span className="text-xs text-gray-400">{formatFileSize(mat.size)}</span>
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            mat.status === 'verified' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {mat.status === 'verified' ? '已核验' : '已上传'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {selectedDeclaration.changeRecords && selectedDeclaration.changeRecords.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">变更记录</h3>
+                  <div className="space-y-4">
+                    {selectedDeclaration.changeRecords.map((record) => (
+                      <div key={record.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <RefreshCw className="w-4 h-4 text-purple-500" />
+                            <span className="font-medium text-gray-800">变更申请</span>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ${changeStatusColors[record.status]}`}>
+                            {changeStatusLabels[record.status]}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p className="text-gray-600">
+                            <span className="text-gray-400">申请原因：</span>{record.reason}
+                          </p>
+                          <p className="text-gray-500">申请时间：{formatDateTime(record.requestedAt)}</p>
+                          {record.acceptedAt && (
+                            <p className="text-gray-500">受理时间：{formatDateTime(record.acceptedAt)}</p>
+                          )}
+                          {record.processedAt && (
+                            <p className="text-gray-500">处理时间：{formatDateTime(record.processedAt)}</p>
+                          )}
+                          {record.processor && (
+                            <p className="text-gray-500">处理人：{record.processor}</p>
+                          )}
+                          {record.opinion && (
+                            <p className="text-gray-600 mt-2 p-2 bg-white rounded">
+                              <span className="text-gray-400">处理意见：</span>{record.opinion}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-6">审核进度</h3>
@@ -561,6 +813,13 @@ export default function Review() {
                       <p className="text-sm text-red-700 mt-2">
                         很抱歉，您的申报未能通过审核。如有疑问请联系监管部门。
                       </p>
+                      {selectedDeclaration.reviewSteps?.find((s) => s.status === 'rejected')?.opinion && (
+                        <div className="mt-2 p-3 bg-white bg-opacity-50 rounded-lg">
+                          <p className="text-sm text-red-800">
+                            驳回原因：{selectedDeclaration.reviewSteps.find((s) => s.status === 'rejected')?.opinion}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -668,6 +927,59 @@ export default function Review() {
                 }`}
               >
                 确认撤销
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalType && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800">{modalConfig.title}</h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-gray-600 mb-4">{modalConfig.desc}</p>
+              {modalConfig.showOpinion && (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {modalConfig.opinionLabel} <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={reviewOpinion}
+                    onChange={(e) => setReviewOpinion(e.target.value)}
+                    placeholder={`请填写${modalConfig.opinionLabel}...`}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                  />
+                </>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleReviewAction}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  modalType === 'approve' || modalType === 'acceptChange' || modalType === 'approveChange'
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : modalType === 'reject' || modalType === 'rejectChange'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                {modalConfig.confirmText}
               </button>
             </div>
           </div>
